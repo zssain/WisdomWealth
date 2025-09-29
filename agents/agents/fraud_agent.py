@@ -80,27 +80,58 @@ class ElderlyFraudAgentWithGemini:
         
         text_lower = text.lower()
         
-        # High-risk patterns
+        # High-risk patterns - Personal Information Requests
         if any(keyword in text_lower for keyword in ["ssn", "social security", "bank account", "credit card", "password"]):
             risk_indicators.append("Request for sensitive personal information")
             risk_level = "HIGH"
             actions.extend(["BLOCK_CALLER", "ALERT_FAMILY"])
         
+        # High-risk patterns - Pressure Tactics
         if any(keyword in text_lower for keyword in ["urgent", "immediate", "act now", "limited time"]):
             risk_indicators.append("High-pressure tactics detected")
             if risk_level != "HIGH":
                 risk_level = "MEDIUM"
             actions.append("VERIFY_INDEPENDENTLY")
         
+        # High-risk patterns - Suspicious Payment Methods
         if any(keyword in text_lower for keyword in ["gift card", "bitcoin", "wire transfer", "money order"]):
             risk_indicators.append("Suspicious payment method requested")
             risk_level = "HIGH"
             actions.extend(["DO_NOT_PAY", "ALERT_FAMILY"])
         
+        # High-risk patterns - Government Impersonation
         if any(keyword in text_lower for keyword in ["irs", "arrest", "warrant", "police"]):
             risk_indicators.append("Government impersonation scam indicators")
             risk_level = "HIGH"
             actions.extend(["HANG_UP", "CONTACT_AUTHORITIES"])
+        
+        # High-risk patterns - Large Money Requests
+        money_keywords = ["pay", "payment", "money", "amount", "lakh", "lakhs", "crore", "crores", "thousand", "million", "dollars", "rupees", "$"]
+        large_amounts = ["lakh", "lakhs", "crore", "crores", "million", "thousand"]
+        if any(keyword in text_lower for keyword in money_keywords) and any(amount in text_lower for amount in large_amounts):
+            risk_indicators.append("Large monetary payment request detected")
+            risk_level = "HIGH"
+            actions.extend(["DO_NOT_PAY", "VERIFY_SENDER", "CONTACT_FAMILY"])
+        
+        # High-risk patterns - Mail/Email Payment Demands
+        if any(keyword in text_lower for keyword in ["received", "mail", "email", "letter"]) and any(pay in text_lower for pay in ["pay", "payment", "send", "transfer"]):
+            risk_indicators.append("Unsolicited payment demand via mail/email")
+            if risk_level != "HIGH":
+                risk_level = "MEDIUM"
+            actions.extend(["VERIFY_SENDER", "DO_NOT_PAY"])
+        
+        # High-risk patterns - Tech Support Scams
+        if any(keyword in text_lower for keyword in ["computer", "virus", "infected", "microsoft", "apple", "tech support", "remote access"]):
+            risk_indicators.append("Tech support scam indicators")
+            risk_level = "HIGH"
+            actions.extend(["HANG_UP", "DO_NOT_ALLOW_ACCESS"])
+        
+        # Medium-risk patterns - Sweepstakes/Prize Scams
+        if any(keyword in text_lower for keyword in ["winner", "won", "prize", "lottery", "sweepstakes", "congratulations"]):
+            risk_indicators.append("Prize/lottery scam indicators")
+            if risk_level != "HIGH":
+                risk_level = "MEDIUM"
+            actions.append("VERIFY_INDEPENDENTLY")
         
         # Generate detailed structured response based on risk
         if risk_level == "HIGH":
