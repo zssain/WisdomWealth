@@ -12,7 +12,8 @@ from agents.family_agent import FamilyAgent
 
 # Import database helpers
 from database.sqlite_helper import SQLiteHelper
-from database.chroma_helper import ChromaHelper
+# Temporarily disable ChromaDB for deployment
+# from database.chroma_helper import ChromaHelper
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -27,7 +28,8 @@ class AgentCoordinator:
     def __init__(self):
         # Initialize database helpers
         self.db = SQLiteHelper()
-        self.chroma = ChromaHelper()
+        # Temporarily disable ChromaDB for deployment compatibility
+        self.chroma = None
         
         # Get API key from environment
         self.gemini_api_key = os.getenv('GEMINI_API_KEY')
