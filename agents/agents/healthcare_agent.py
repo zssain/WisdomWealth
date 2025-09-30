@@ -100,14 +100,118 @@ class HealthcareFinanceAgent:
         risk_level = "LOW"
         actions = []
         
+        text_lower = text.lower()
+        
+        # Check if this is a premium calculation request
+        if any(keyword in text_lower for keyword in ["calculate", "premium", "cost", "price"]) and any(keyword in text_lower for keyword in ["insurance", "coverage", "policy"]):
+            # Extract age and coverage for direct calculation
+            try:
+                import re
+                age_match = re.search(r'(\d+)\s*year', text_lower)
+                coverage_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:lakh|crore)', text_lower)
+                
+                age = int(age_match.group(1)) if age_match else 40
+                # Cap age at reasonable limits
+                if age > 100:
+                    age = 40  # Default for unrealistic ages
+                
+                if coverage_match:
+                    coverage_text = coverage_match.group(0).lower()
+                    coverage_num = float(coverage_match.group(1))
+                    if 'crore' in coverage_text:
+                        coverage_amount = int(coverage_num * 10000000)  # Convert crore to rupees
+                    elif 'lakh' in coverage_text:
+                        coverage_amount = int(coverage_num * 100000)   # Convert lakh to rupees
+                    else:
+                        coverage_amount = 1000000  # Default 10 lakh
+                else:
+                    coverage_amount = 1000000  # Default 10 lakh
+                
+                # Calculate premium directly using our tool
+                premium_data = calculate_estimated_premium(age, coverage_amount, "tier2")
+                
+                response = f"""💳 **HEALTH INSURANCE PREMIUM CALCULATION** 💳
+
+**📊 For a {age}-year-old with ₹{coverage_amount/10000000:.1f} Crore Coverage:**
+
+**💰 Estimated Premium:**
+• **Annual Premium**: {premium_data['annual_premium']}
+• **Monthly Premium**: {premium_data['monthly_premium']}
+
+**📈 Premium Breakdown:**
+• **Base Premium**: ₹8,000
+• **Age Factor**: {max(0, (age - 25)) * 200:,.0f} (increases with age)
+• **Coverage Factor**: ₹{(coverage_amount / 100000) * 800:,.0f} (based on coverage amount)
+• **City Factor**: ₹2,500 (Tier-2 city rates)
+
+**💡 Factors Affecting Your Premium:**
+
+• **Age**: {age} years - {'Higher age increases premium' if age > 40 else 'Good age for affordable rates'}
+• **Coverage**: ₹{coverage_amount/10000000:.1f} Crore - {'Excellent high coverage' if coverage_amount >= 5000000 else 'Good coverage amount'}
+• **City**: Metro cities cost ₹2,500 more annually
+• **Medical History**: Pre-existing conditions may increase cost
+• **Lifestyle**: Non-smoker discounts available (5-15%)
+
+**🏥 Coverage Benefits at This Level:**
+• **ICU Coverage**: Up to ₹{coverage_amount/10000000:.1f} Crore
+• **Surgery Coverage**: All major procedures covered
+• **Hospitalization**: Room rent, nursing, medicines
+• **Pre/Post Hospitalization**: 30/60 days coverage
+• **Emergency Ambulance**: Usually included
+• **Health Check-ups**: Annual preventive care
+
+**💰 Cost Reduction Tips:**
+• **Higher Deductible**: Choose ₹25,000-₹50,000 deductible (save 10-20%)
+• **Co-payment Option**: 10-20% sharing reduces premium
+• **Annual Payment**: Save 5-10% vs monthly payments
+• **Family Floater**: More cost-effective for families
+• **Corporate Plans**: Check if employer offers group rates
+
+**📋 Tax Benefits (Section 80D):**
+• **Deduction Limit**: ₹25,000 for individuals under 60
+• **Senior Citizens**: ₹50,000 deduction limit
+• **Actual Tax Saving**: 20-30% of premium amount
+
+**⚠️ Important Considerations:**
+• **Waiting Period**: 2-4 years for pre-existing conditions
+• **Network Hospitals**: Verify preferred hospitals in network
+• **Claim Settlement Ratio**: Choose insurers with 95%+ ratio
+• **Premium Increase**: Expect 10-15% annual increases
+
+**🎯 Recommended Next Steps:**
+1. **Compare Quotes**: Get quotes from 3-4 top insurers
+2. **Read Policy Terms**: Understand exclusions and waiting periods
+3. **Health Declaration**: Be completely honest about medical history
+4. **Start Soon**: Premiums increase significantly with age
+
+**🏆 Top Insurers for ₹1 Crore Coverage:**
+• **HDFC ERGO**: Optima Restore plan
+• **Star Health**: Comprehensive plan
+• **Care Health**: Supreme plan
+• **ICICI Lombard**: Complete Health plan
+
+Would you like me to explain any specific aspect of this premium calculation or help you compare different coverage options?"""
+
+                risk_level = "LOW"
+                actions.append("CALCULATE_PREMIUM")
+                
+                return {
+                    "risk_level": risk_level,
+                    "response": response,
+                    "actions": actions,
+                    "confidence_score": 0.95
+                }
+                
+            except Exception as e:
+                # If direct calculation fails, fall back to AI
+                pass
+        
+        # Try AI with tools for other healthcare questions
         try:
-            # Send to Gemini with tools
             response = self.chat.send_message(text)
             ai_response = response.text
             
             # Determine risk level based on content
-            text_lower = text.lower()
-            
             if any(keyword in text_lower for keyword in ["scam", "fraud", "suspicious", "free", "medicare call"]):
                 risk_level = "HIGH"
                 actions.extend(["DO_NOT_SHARE", "VERIFY_INDEPENDENTLY"])
